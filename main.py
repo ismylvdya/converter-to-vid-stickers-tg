@@ -1,6 +1,7 @@
 '''проходит по всем видео И ИЗОБРАЖЕНИЯМ в input_directory и конвертирует их в webm-ки подходящие для видео-стикеров в телеге (в output_directory)
 
 важно что видосы и гифки УСКОРЯЮТСЯ если это нужно а не обрезаются
+прозрачность у png сохраняется
 
 Video Requirements for Telegram Video Stickers:
 • Duration must not exceed 3 seconds.
