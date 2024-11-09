@@ -15,9 +15,9 @@ Video Requirements for Telegram Video Stickers:
 
 import os
 # для предварительными манипуляциями с видосами:
-import moviepy.editor as mp # весь доступ к ffmpeg (для видосов) -- через этого малыша
-# для :
-import subprocess # для выполнения терминальной команды ffmpeg для изображений
+import moviepy.editor as mp
+# для вызова команд ffmpeg:
+import subprocess
 # от бага с ANTIALIAS<->LANCZOS в PIL.Image:
 from PIL import Image
 from numpy  import array as nparray
@@ -25,7 +25,7 @@ from numpy  import array as nparray
 
 ########################### ТО ЧТО МОЖНО МЕНЯТЬ ######################################
 
-input_directory = '/Users/chumbulev/Pictures/✂️Screenshots'    # ПАПКА с исходниками
+input_directory = '/Users/chumbulev/Desktop'    # ПАПКА с исходниками
 output_directory = ''    # ПАПКА куда экспортировать ('' -> экспортируем рядом с исходниками) (может не существовать)
 
 MAX_SIDE = 512  # px
@@ -54,6 +54,27 @@ def get_file_duration(file_path):
     )
     # Преобразуем результат в число с плавающей точкой
     return float(result.stdout.strip())
+
+
+def get_file_fps(file_path):
+    '''Возвращает fps видеофайла file_path (средствами ffprobe)'''
+    result = subprocess.run(
+        [
+            "ffprobe",
+            "-v", "error",
+            "-select_streams", "v:0",
+            "-show_entries", "stream=r_frame_rate",
+            "-of", "default=noprint_wrappers=1:nokey=1",
+            file_path
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True
+    )
+    # Получаем строку с дробью (например, "30000/1001") и вычисляем ее значение
+    fps_str = result.stdout.strip()
+    num, denom = map(int, fps_str.split('/'))
+    return num / denom
 
 
 def resize_video(clip, max_side):
@@ -94,7 +115,7 @@ def convert_video_to_webm(input_path, output_path, fps, bitrate):
         '-c:v', TARGET_CODEC,
         '-b:v', f'{bitrate}k',
         '-r', str(fps),
-        '-pix_fmt', 'yuv420p',  # Установка цветового пространства
+        '-pix_fmt', 'yuva420p',  # Установка цветового пространства
         '-profile:v', '0',      # Установка VP9 Profile 0
         '-an',  # повторное даление аудио на всякий
         output_path
@@ -171,7 +192,7 @@ def process_gif(input_file_path, output_dir):
 
 def process_static_image(input_file_path, output_dir):
     '''берет пикчу input_file_path и конвертирует ее средствами ffmpeg в .webm в папке output_dir (vp9, 512pxl, палитра yuva420p, 25 fps).
-    Для обычных пикчей получается duration 4мс'''
+    Для обычных пикчей получается duration 40 мс'''
     try:
         # получаеется  output_dir + / + имя исходника без расширения + .webm
         output_file_path = os.path.join(output_dir, os.path.splitext(os.path.basename(input_file_path))[0] + ".webm")
@@ -198,7 +219,7 @@ def main(input_dir, output_dir):
     # Проходим по всем файлам в директории
     for filename in os.listdir(input_dir):
         file_path = os.path.join(input_dir, filename)
-        if filename.endswith(('.mp4', '.mov', '.avi', '.mkv')):
+        if filename.endswith(('.mp4', '.mov', '.avi', '.mkv', '.webm')):
             files_count += 1
             print(f"{files_count}. Видео {filename}:")
 
@@ -206,6 +227,7 @@ def main(input_dir, output_dir):
 
             output_file_path = os.path.join(output_dir, os.path.splitext(os.path.basename(file_path))[0] + ".webm")  # output_dir + / + filename без раширения файла + .webm :
             print(' ' * (len(str(files_count)) + 1), f'{round(get_file_duration(file_path), 2)} sec  -->  {round(get_file_duration(output_file_path), 2)} sec') # выводится строка вида '7.82 sec  -->  2.99 sec'
+            print(' ' * (len(str(files_count)) + 1), f'{get_file_fps(file_path)} fps  -->  {get_file_fps(output_file_path)} fps')  # выводится строка вида '7.82 sec  -->  2.99 sec'
         elif filename.endswith(('.gif')):
             files_count += 1
             print(f"{files_count}. Гифка {filename}:")
@@ -214,7 +236,7 @@ def main(input_dir, output_dir):
 
             output_file_path = os.path.join(output_dir, os.path.splitext(os.path.basename(file_path))[0] + ".webm")  # output_dir + / + filename без раширения файла + .webm :
             print(' ' * (len(str(files_count)) + 1), f'{round(get_file_duration(file_path), 2)} sec  -->  {round(get_file_duration(output_file_path), 2)} sec')  # выводится строка вида '7.82 sec  -->  2.99 sec'
-        elif filename.endswith(('.jpg', '.jpeg', '.png', '.webp')):
+        elif filename.endswith(('.jpg', '.jpeg', '.png')):
             files_count += 1
             print(f"{files_count}. Изображение {filename}:")
 
