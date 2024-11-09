@@ -25,8 +25,8 @@ from numpy  import array as nparray
 
 ########################### ТО ЧТО МОЖНО МЕНЯТЬ ######################################
 
-input_directory = '/Users/chumbulev/Desktop'    # ПАПКА с исходниками
-output_directory = ''    # ПАПКА куда экспортировать ('' -> экспортируем рядом с исходниками) (может не существовать)
+input_directory = '/Users/chumbulev/Desktop/input_folder'    # ПАПКА с исходниками
+output_directory = '/Users/chumbulev/Desktop/output_folder'    # ПАПКА куда экспортировать ('' -> экспортируем рядом с исходниками) (может не существовать)
 
 MAX_SIDE = 512  # px
 MAX_DURATION = 2.7  # sec
@@ -219,7 +219,7 @@ def main(input_dir, output_dir):
     # Проходим по всем файлам в директории
     for filename in os.listdir(input_dir):
         file_path = os.path.join(input_dir, filename)
-        if filename.endswith(('.mp4', '.mov', '.avi', '.mkv', '.webm')):
+        if filename.endswith(('.mp4', '.mov', '.avi', '.mkv')):
             files_count += 1
             print(f"{files_count}. Видео {filename}:")
 
@@ -227,7 +227,7 @@ def main(input_dir, output_dir):
 
             output_file_path = os.path.join(output_dir, os.path.splitext(os.path.basename(file_path))[0] + ".webm")  # output_dir + / + filename без раширения файла + .webm :
             print(' ' * (len(str(files_count)) + 1), f'{round(get_file_duration(file_path), 2)} sec  -->  {round(get_file_duration(output_file_path), 2)} sec') # выводится строка вида '7.82 sec  -->  2.99 sec'
-            print(' ' * (len(str(files_count)) + 1), f'{get_file_fps(file_path)} fps  -->  {get_file_fps(output_file_path)} fps')  # выводится строка вида '7.82 sec  -->  2.99 sec'
+            print(' ' * (len(str(files_count)) + 1), f'{round(get_file_fps(file_path), 2)} fps  -->  {round(get_file_fps(output_file_path), 2)} fps')  # выводится строка вида '7.82 sec  -->  2.99 sec'
         elif filename.endswith(('.gif')):
             files_count += 1
             print(f"{files_count}. Гифка {filename}:")
