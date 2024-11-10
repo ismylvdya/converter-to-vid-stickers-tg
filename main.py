@@ -30,7 +30,7 @@ output_directory = '/Users/chumbulev/Desktop/output_folder'    # ПАПКА ку
 
 MAX_SIDE = 512  # px
 MAX_DURATION = 2.7  # sec
-MAX_SIZE = 250 * 1024  # 250KB
+MAX_SIZE = 245 * 1024  # 250KB
 MAX_FPS = 24  # fps
 TARGET_FORMAT = 'webm'
 TARGET_CODEC = 'vp9'
@@ -39,7 +39,7 @@ TARGET_CODEC = 'vp9'
 
 
 def get_file_duration(file_path):
-    '''возвращает длительность файла file_path (средствами ffprobe) (в секундах)'''
+    '''возвращает длительность файла file_path (средствами ffprobe) (в секундах, float)'''
     result = subprocess.run(
         [
             "ffprobe",
@@ -57,7 +57,7 @@ def get_file_duration(file_path):
 
 
 def get_file_fps(file_path):
-    '''Возвращает fps видеофайла file_path (средствами ffprobe)'''
+    '''Возвращает fps видеофайла file_path в float (средствами ffprobe)'''
     result = subprocess.run(
         [
             "ffprobe",
@@ -75,6 +75,20 @@ def get_file_fps(file_path):
     fps_str = result.stdout.strip()
     num, denom = map(int, fps_str.split('/'))
     return num / denom
+
+
+def get_file_KB(file_path):
+    '''возвращает строку количества KB вида '12 345.678' (это пример 12MB)'''
+
+    bytes_size = os.path.getsize(file_path)
+
+    kb_size = bytes_size / 1000 # файндер походу считает деля на 1000 а не на 1024 так что и я буду.
+
+    # Форматирование в строку с разделением тысяч и тремя знаками после запятой
+    kb_formatted = f"{kb_size:,.3f}".replace(",", " ")
+
+    return kb_formatted
+
 
 
 def resize_video(clip, max_side):
@@ -177,17 +191,31 @@ def process_gif(input_file_path, output_dir):
         output_file_path = os.path.join(output_dir, os.path.splitext(os.path.basename(input_file_path))[0] + ".webm")
 
         gif_duration = get_file_duration(input_file_path)
-        if gif_duration > MAX_DURATION:  # .gif дольше MAX_DURATION сек
-            # терминальная команда ffmpeg которая: масштабирует input_file_path до 512pxl, УСКОРЯЕТ ДАННЫЙ GIF ДО MAX_DURATION СЕК, конвертирует в webm (vp9, палитра yuva420p учитывающая прозрачность) и создает файл output_file_path
-            terminal_command = f'''ffmpeg -y -i {input_file_path} -filter_complex "[0:v]format=yuva420p,scale='if(gte(iw,ih),{MAX_SIDE},-1)':'if(gte(iw,ih),-1,{MAX_SIDE})',setpts=PTS/({gif_duration}/{MAX_DURATION})" -c:v libvpx-vp9 -pix_fmt yuva420p -t {MAX_DURATION} {output_file_path}'''
-        else:  # .gif короче MAX_DURATION сек (либо равно)
-            # терминальная команда ffmpeg которая масштабирует input_file_path до 512pxl, СОХРАНЯЕТ DURATION ДАННОГО GIF, конвертирует в webm (vp9, палитра yuva420p учитывающая прозрачность) и создает файл output_file_path
-            terminal_command = f'''ffmpeg -y -i {input_file_path} -filter_complex "[0:v]format=yuva420p,scale='if(gte(iw,ih),{MAX_SIDE},-1)':'if(gte(iw,ih),-1,{MAX_SIDE})'" -c:v libvpx-vp9 -pix_fmt yuva420p -t {gif_duration} {output_file_path}'''
+        fps = MAX_FPS
+        bitrate = 1000 # начальный битрейт в kbit/s
 
-        subprocess.run(terminal_command, shell=True, capture_output=True, text=True)
+        # далее циклично короткая/длинная гиф конвертируется в webm, проверяется вес и уменьшается fps и bitrate если надо
+        while True:
+            # конвертирование для длинных или коротких гифок
+            if gif_duration > MAX_DURATION:  # .gif дольше MAX_DURATION сек
+                # терминальная команда ffmpeg которая: масштабирует input_file_path до 512pxl, УСКОРЯЕТ ДАННЫЙ GIF ДО MAX_DURATION СЕК, конвертирует в webm (vp9, палитра yuva420p учитывающая прозрачность, заданный fps) и создает файл output_file_path
+                terminal_command = f'''ffmpeg -y -i {input_file_path} -filter_complex "[0:v]format=yuva420p,fps={fps},scale='if(gte(iw,ih),{MAX_SIDE},-1)':'if(gte(iw,ih),-1,{MAX_SIDE})',setpts=PTS/({gif_duration}/{MAX_DURATION})" -c:v libvpx-vp9 -b:v {bitrate}k -pix_fmt yuva420p -t {MAX_DURATION} {output_file_path}'''
+            else:  # .gif короче MAX_DURATION сек (либо равно)
+                # терминальная команда ffmpeg которая масштабирует input_file_path до 512pxl, СОХРАНЯЕТ DURATION ДАННОГО GIF, конвертирует в webm (vp9, палитра yuva420p учитывающая прозрачность, заданный fps) и создает файл output_file_path
+                terminal_command = f'''ffmpeg -y -i {input_file_path} -filter_complex "[0:v]format=yuva420p,fps={fps},scale='if(gte(iw,ih),{MAX_SIDE},-1)':'if(gte(iw,ih),-1,{MAX_SIDE})'" -c:v libvpx-vp9 -b:v {bitrate}k -pix_fmt yuva420p -t {gif_duration} {output_file_path}'''
+
+            subprocess.run(terminal_command, shell=True, capture_output=True, text=True)
+
+            # Проверяем размер файла
+            if os.path.getsize(output_file_path) <= MAX_SIZE:
+                break
+            else:
+                # Уменьшаем FPS и битрейт, если файл больше 256KB
+                fps = max(5, fps - 2)  # Минимальный FPS 5
+                bitrate = max(100, bitrate - 100)  # Минимальный битрейт 100 kbit/s
 
     except Exception as e:
-        print(f"⚠️Ошибка при обработке изображения {input_file_path}: {e}")
+        print(f"⚠️Ошибка при обработке гифки {input_file_path}: {e}")
 
 
 def process_static_image(input_file_path, output_dir):
@@ -228,6 +256,7 @@ def main(input_dir, output_dir):
             output_file_path = os.path.join(output_dir, os.path.splitext(os.path.basename(file_path))[0] + ".webm")  # output_dir + / + filename без раширения файла + .webm :
             print(' ' * (len(str(files_count)) + 1), f'{round(get_file_duration(file_path), 2)} sec  -->  {round(get_file_duration(output_file_path), 2)} sec') # выводится строка вида '7.82 sec  -->  2.99 sec'
             print(' ' * (len(str(files_count)) + 1), f'{round(get_file_fps(file_path), 2)} fps  -->  {round(get_file_fps(output_file_path), 2)} fps')  # выводится строка вида '7.82 sec  -->  2.99 sec'
+            print(' ' * (len(str(files_count)) + 1), f'{get_file_KB(file_path)} KB  -->  {get_file_KB(output_file_path)} KB')
         elif filename.endswith(('.gif')):
             files_count += 1
             print(f"{files_count}. Гифка {filename}:")
@@ -236,13 +265,17 @@ def main(input_dir, output_dir):
 
             output_file_path = os.path.join(output_dir, os.path.splitext(os.path.basename(file_path))[0] + ".webm")  # output_dir + / + filename без раширения файла + .webm :
             print(' ' * (len(str(files_count)) + 1), f'{round(get_file_duration(file_path), 2)} sec  -->  {round(get_file_duration(output_file_path), 2)} sec')  # выводится строка вида '7.82 sec  -->  2.99 sec'
+            print(' ' * (len(str(files_count)) + 1), f'{round(get_file_fps(file_path), 2)} fps  -->  {round(get_file_fps(output_file_path), 2)} fps')
+            print(' ' * (len(str(files_count)) + 1), f'{get_file_KB(file_path)} KB  -->  {get_file_KB(output_file_path)} KB')
         elif filename.endswith(('.jpg', '.jpeg', '.png')):
             files_count += 1
             print(f"{files_count}. Изображение {filename}:")
 
             process_static_image(file_path, output_dir) # полностью процесс конвертации и записи
 
+            output_file_path = os.path.join(output_dir, os.path.splitext(os.path.basename(file_path))[0] + ".webm")  # output_dir + / + filename без раширения файла + .webm :
             print(' ' * (len(str(files_count)) + 1), '0.00 sec  -->  0.04 sec')
+            print(' ' * (len(str(files_count)) + 1), f'{get_file_KB(file_path)} KB  -->  {get_file_KB(output_file_path)} KB')
 
 
 if __name__ == '__main__':
