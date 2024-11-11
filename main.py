@@ -30,7 +30,7 @@ output_directory = '/Users/chumbulev/Desktop/output_folder'    # ПАПКА ку
 
 MAX_SIDE = 512  # px
 MAX_DURATION = 2.7  # sec
-MAX_SIZE = 245 * 1024  # 250KB
+MAX_SIZE = 1000 * 250  # 250KB    походу файндер умножает на 1000 а не на 1024 так что и мы будем также делать.
 MAX_FPS = 24  # fps
 TARGET_FORMAT = 'webm'
 TARGET_CODEC = 'vp9'
@@ -97,7 +97,7 @@ def resize_video(clip, max_side):
     def resize_frame(frame):
         img = Image.fromarray(frame)
         w, h = img.size
-        if max(w, h) > max_side:
+        if max(w, h) != max_side:
             scale_factor = max_side / max(w, h)
             new_size = (int(w * scale_factor), int(h * scale_factor))
             # Применение LANCZOS для масштабирования
@@ -255,8 +255,8 @@ def main(input_dir, output_dir):
 
             output_file_path = os.path.join(output_dir, os.path.splitext(os.path.basename(file_path))[0] + ".webm")  # output_dir + / + filename без раширения файла + .webm :
             print(' ' * (len(str(files_count)) + 1), f'{round(get_file_duration(file_path), 2)} sec  -->  {round(get_file_duration(output_file_path), 2)} sec') # выводится строка вида '7.82 sec  -->  2.99 sec'
-            print(' ' * (len(str(files_count)) + 1), f'{round(get_file_fps(file_path), 2)} fps  -->  {round(get_file_fps(output_file_path), 2)} fps')  # выводится строка вида '7.82 sec  -->  2.99 sec'
-            print(' ' * (len(str(files_count)) + 1), f'{get_file_KB(file_path)} KB  -->  {get_file_KB(output_file_path)} KB')
+            print(' ' * (len(str(files_count)) + 1), f'{round(get_file_fps(file_path), 2)} fps  -->  {round(get_file_fps(output_file_path), 2)} fps')  # выводится строка вида '24.98 fps  -->  18.00 fps'
+            print(' ' * (len(str(files_count)) + 1), f'{get_file_KB(file_path)} KB  -->  {get_file_KB(output_file_path)} KB') # выводится строка вида '12 345.678 KB  -->  249.12 KB'
         elif filename.endswith(('.gif')):
             files_count += 1
             print(f"{files_count}. Гифка {filename}:")
@@ -265,8 +265,8 @@ def main(input_dir, output_dir):
 
             output_file_path = os.path.join(output_dir, os.path.splitext(os.path.basename(file_path))[0] + ".webm")  # output_dir + / + filename без раширения файла + .webm :
             print(' ' * (len(str(files_count)) + 1), f'{round(get_file_duration(file_path), 2)} sec  -->  {round(get_file_duration(output_file_path), 2)} sec')  # выводится строка вида '7.82 sec  -->  2.99 sec'
-            print(' ' * (len(str(files_count)) + 1), f'{round(get_file_fps(file_path), 2)} fps  -->  {round(get_file_fps(output_file_path), 2)} fps')
-            print(' ' * (len(str(files_count)) + 1), f'{get_file_KB(file_path)} KB  -->  {get_file_KB(output_file_path)} KB')
+            print(' ' * (len(str(files_count)) + 1), f'{round(get_file_fps(file_path), 2)} fps  -->  {round(get_file_fps(output_file_path), 2)} fps') # выводится строка вида '24.98 fps  -->  18.00 fps'
+            print(' ' * (len(str(files_count)) + 1), f'{get_file_KB(file_path)} KB  -->  {get_file_KB(output_file_path)} KB') # выводится строка вида '12 345.678 KB  -->  249.12 KB'
         elif filename.endswith(('.jpg', '.jpeg', '.png')):
             files_count += 1
             print(f"{files_count}. Изображение {filename}:")
@@ -275,7 +275,7 @@ def main(input_dir, output_dir):
 
             output_file_path = os.path.join(output_dir, os.path.splitext(os.path.basename(file_path))[0] + ".webm")  # output_dir + / + filename без раширения файла + .webm :
             print(' ' * (len(str(files_count)) + 1), '0.00 sec  -->  0.04 sec')
-            print(' ' * (len(str(files_count)) + 1), f'{get_file_KB(file_path)} KB  -->  {get_file_KB(output_file_path)} KB')
+            print(' ' * (len(str(files_count)) + 1), f'{get_file_KB(file_path)} KB  -->  {get_file_KB(output_file_path)} KB') # выводится строка вида '12 345.678 KB  -->  249.12 KB'
 
 
 if __name__ == '__main__':
