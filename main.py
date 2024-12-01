@@ -19,7 +19,7 @@ import subprocess
 
 ########################### ТО ЧТО МОЖНО МЕНЯТЬ ######################################
 
-input_directory = '/Users/chumbulev/Downloads'    # ПАПКА с исходниками
+input_directory = '/Users/chumbulev/Downloads/✈️Telegram'    # ПАПКА с исходниками
 output_directory = ''    # ПАПКА куда экспортировать ('' -> экспортируем рядом с исходниками) (может не существовать)
 
 MAX_SIDE = 512  # px
@@ -196,7 +196,6 @@ def process_file(input_file_path, output_file_path):
         print(f"⚠️ ошибка при обработке файла {input_file_path}: {e}")
 
 
-
 ################################################ MAIN ######################################################
 
 
@@ -236,6 +235,10 @@ def main(input_dir, output_dir):
             print(' ' * (len(str(files_count)) + 1), f'{round(get_file_kbps(input_file_path))} kbit/s  -->  {round(get_file_kbps(output_file_path))} kbit/s')
             # вывод строки вида '12 345.678 KB  -->  249.12 KB'
             print(' ' * (len(str(files_count)) + 1), f'{get_file_KB(input_file_path)} KB  -->  {get_file_KB(output_file_path)} KB')
+
+            # удаляем созданный временный файл jpg (если сейчас обрабатывается webp)
+            if orig_extension == '.webp':
+                os.remove(input_file_path)
 
 if __name__ == '__main__':
     main(input_directory, output_directory)
